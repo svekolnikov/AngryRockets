@@ -19,6 +19,7 @@ typedef struct {
     int boost_before;
     int r1;
     int r2;
+    int rSum;
     int pos_after;
     int boost_after;
     int boosts;
@@ -92,18 +93,6 @@ int GetRandomNumber(int from, int to)
     SEED = SEED * 16807 % R_MAX;
     return from + (int) SEED % (to - from + 1);
 }
-void SetTwoRandom(Game_t *g)
-{
-    g->p_t[g->player-1].r1 = GetRandomNumber(1, 6);
-    g->p_t[g->player-1].r2 = GetRandomNumber(1, 6);
-}
-int GetMaxRandom(Game_t *g)
-{
-    if(g->p_t[g->player-1].r1 > g->p_t[g->player-1].r2)
-        return g->p_t[g->player-1].r1;
-
-    return g->p_t[g->player-1].r2;
-}
 void PlaceFeatureToWay(Game_t *g, CellType f)
 {
     int featuresNum = 0;
@@ -132,7 +121,41 @@ void PlaceFeatureToWay(Game_t *g, CellType f)
 	for(int i=0; i<g->n; i++)
         if(g->way[i*2] == f) printf("%d ", i);
 }
-int FindPlayer(Game_t *g, CellType player)
+
+void SetTwoRandom(Game_t *g)
+{
+    g->p_t[g->player-1].r1 = GetRandomNumber(1,6);
+    g->p_t[g->player-1].r2 = GetRandomNumber(1,6);
+    g->p_t[g->player-1].rSum = g->p_t[g->player-1].r1 + g->p_t[g->player-1].r2;
+}
+int GetR1(Game_t *g)
+{
+    return g->p_t[g->player-1].r1;
+}
+int GetR2(Game_t *g)
+{
+    return g->p_t[g->player-1].r2;
+}
+int GetRSum(Game_t *g)
+{
+    return g->p_t[g->player-1].rSum;
+}
+int GetMaxRandom(Game_t *g)
+{
+    if(GetR1(g) > GetR2(g))
+        return GetR1(g);
+
+    return GetR2(g);
+}
+int CompareTwoRandomWith(Game_t *g, int num)
+{
+    if((GetR1(g) == GetR2(g)) && GetR1(g) == num)
+        return 1;
+    return 0;
+}
+
+//*****************************************************************
+int FindPlayerOnWay(Game_t *g, CellType player)
 {
     for(int i=0; i<g->n; i++)
     {
@@ -141,63 +164,10 @@ int FindPlayer(Game_t *g, CellType player)
     }
     return -1;
 }
-void ResetPlayer(Game_t *g, CellType player)
+void PlacePlayerToWayPosition(Game_t *g, CellType player, int pos)
 {
-    for(int i=0; i<g->n; i++)
-    {
-        if(g->way[i*2] == player)
-        {
-            g->way[i*2] = CELL_EMPTY;
-        }
-    }
-}
-void ReplacePlayers(Game_t *g)
-{
-    int pos1 = GetPosBefore(g,CELL_PLAYER1);
-    int pos2 = GetPosBefore(g,CELL_PLAYER2);
-
-    ResetPlayer(g,CELL_PLAYER1);
-    ResetPlayer(g,CELL_PLAYER2);
-
-    SetPosBefore(g,CELL_PLAYER1,pos2);
-    SetPosBefore(g,CELL_PLAYER2,pos1);
-
-    PlacePlayerToPosition(g,CELL_PLAYER1,pos2);
-    PlacePlayerToPosition(g,CELL_PLAYER2,pos1);
-}
-void SetPosBefore(Game_t *g, CellType player, int pos)
-{
-    g->p_t[player-1].pos_before = pos;
-}
-void SetPosAfter(Game_t *g, CellType player, int pos)
-{
-    g->p_t[player-1].pos_after = pos;
-}
-int GetPosBefore(Game_t *g, CellType player)
-{
-    return g->p_t[player-1].pos_before;
-}
-int GetPosAfter(Game_t *g, CellType player)
-{
-    return g->p_t[player-1].pos_after;
-}
-void SetBoostsBefore(Game_t *g,CellType player, int boosts)
-{
-    g->p_t[player-1].boost_before = boosts;
-}
-void SetBoostsAfter(Game_t *g,CellType player, int boosts)
-{
-    g->p_t[player-1].boost_after = boosts;
-}
-void PlacePlayerToPosition(Game_t *g, CellType player, int pos)
-{
+    ResetPlayerOnWay(g,player);
     g->way[pos*2] = player;
-}
-int CompareDicesWith(Game_t *g, int num)
-{
-    if(((g->p_t[g->player].r1 == g->p_t[g->player].r2) && g->p_t[g->player].r1 == 6))
-        return 1;
-    return 0;
 }
 int IsNextPlayerAhead(Game_t *g)
 {
@@ -207,38 +177,97 @@ int IsNextPlayerAhead(Game_t *g)
         return 1;
     return 0;
 }
+//*****************************************************************
+void ResetPlayerOnWay(Game_t *g, CellType player)
+{
+    for(int i=0; i<g->n; i++)
+    {
+        if(g->way[i*2] == player)
+        {
+            g->way[i*2] = CELL_EMPTY;
+        }
+    }
+}
+int ReplacePlayersOnWay(Game_t *g)
+{
+    int wayPos1 = FindPlayerOnWay(g,CELL_PLAYER1);
+    int wayPos2 = FindPlayerOnWay(g,CELL_PLAYER2);
+
+    if(wayPos1 == -1 || wayPos2 == -1)
+        return -1;
+
+    ResetPlayerOnWay(g,CELL_PLAYER1);
+    ResetPlayerOnWay(g,CELL_PLAYER2);
+
+    PlacePlayerToWayPosition(g,CELL_PLAYER1,wayPos2);
+    PlacePlayerToWayPosition(g,CELL_PLAYER2,wayPos1);
+}
+
+//*****************************************************************
+void SetPosBefore(Game_t *g, CellType player, int pos)
+{
+    g->p_t[player-1].pos_before = pos;
+}
+int GetPosBefore(Game_t *g, CellType player)
+{
+    return g->p_t[player-1].pos_before;
+}
+void SetPosAfter(Game_t *g, CellType player, int pos)
+{
+    g->p_t[player-1].pos_after = pos;
+}
+int GetPosAfter(Game_t *g, CellType player)
+{
+    return g->p_t[player-1].pos_after;
+}
+
+//*****************************************************************
+void SetBoostsBefore(Game_t *g,CellType player, int boosts)
+{
+    g->p_t[player-1].boost_before = boosts;
+}
+int GetBoostsBefore(Game_t *g,CellType player)
+{
+    return g->p_t[player-1].boost_before;
+}
+void SetBoostsAfter(Game_t *g,CellType player, int boosts)
+{
+    g->p_t[player-1].boost_after = boosts;
+}
+int GetBoostsAfter(Game_t *g,CellType player)
+{
+    return g->p_t[player-1].boost_after;
+}
+
+//*****************************************************************
 void DoStep(Game_t *g)
 {
-    SetPosBefore(g, g->player, FindPlayer(g, g->player));
-
+    SetPosBefore(g, g->player, FindPlayerOnWay(g, g->player));
+    SetBoostsBefore(g, g->player, GetBoostsAfter(g, g->player));
 
     if(GetPosBefore(g,g->player) == -1) // Player outside
     {
+        //Step size
         int d = 0;
-        if(g->p_t[g->player-1].r1 + g->p_t[g->player-1].r1 > 7)
-            d = g->p_t[g->player-1].r1 + g->p_t[g->player-1].r1 - 7; // shift
+        if( GetRSum(g) > 7) d = GetRSum(g) - 7;
 
-        PlacePlayerToPosition(g,g->player,d);
+        PlacePlayerToWayPosition(g,g->player,d);
     }
     else // Player on the field
     {
-        int d = GetMaxRandom(g);
-
-        if(CompareDicesWith(g,6) == 1 && IsNextPlayerAhead(g) == 1) // case 1
+        if(CompareTwoRandomWith(g,6) == 1 && IsNextPlayerAhead(g) == 1) // case 1
         {
-
-            ReplacePlayers(g);
+            ReplacePlayersOnWay(g);
             return;
         }
 
-        if(CompareDicesWith(g,1) == 1 && IsNextPlayerAhead(g) == 0) // case 2
+        if(CompareTwoRandomWith(g,1) == 1 && IsNextPlayerAhead(g) == 0) // case 2
         {
-            ReplacePlayers(g);
+            ReplacePlayersOnWay(g);
             return;
         }
 
-
-        SetBoostsBefore(g, g->player, 666);
+        int d = GetMaxRandom(g) + GetBoostsBefore(g, g->player);
     }
 }
 void PrintStep(Game_t *i)
@@ -267,7 +296,7 @@ void FindHotspot(Game_t *g)
     int hotspot = -1;
     for (int r = 0; r <  g->n; r++)
     {
-       printf("%d ", g->way[r*2+1]);
+       //printf("%d ", g->way[r*2+1]);
        if(g->way[r*2+1] > maxCellScore)
        {
            maxCellScore = g->way[r*2+1];
@@ -286,7 +315,6 @@ void PrintStatistic(Game_t *g)
     FindHotspot(g);
     printf("HOTSPOT:%d",g->hotspot);
 }
-
 int main(void) {
     //*********************** Initialization ***********************
     Game_t game = Initialization();
@@ -297,7 +325,6 @@ int main(void) {
     PlaceFeatureToWay(&game,CELL_BOOST);
     printf("\n");
     //************************ Game process ************************
-
     while(game.round<27)
     {
         SetTwoRandom(&game);//ok
@@ -308,7 +335,6 @@ int main(void) {
     }
     //************************ Finish ******************************
     PrintStatistic(&game);
-
     while(1){}
 	return 0;
 }
