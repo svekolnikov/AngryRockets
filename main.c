@@ -2,15 +2,16 @@
 #include <stdlib.h>
 #include <string.h>
 
+//*********************** Defines and Global variables ************
 #define R_MAX 2147483647
 static long long unsigned int SEED = 0x1;
-
+//*********************** Data types ******************************
 typedef enum{
+    CELL_PLAYER1 = 1,
+    CELL_PLAYER2,
     CELL_EMPTY,
     CELL_BOOST,
-    CELL_BLOCK,
-    CELL_PLAYER1,
-    CELL_PLAYER2
+    CELL_BLOCK
 }CellType;
 
 typedef struct {
@@ -20,6 +21,7 @@ typedef struct {
     int r2;
     int pos_after;
     int boost_after;
+    int boosts;
 }Player_t;
 
 typedef struct Game_t{
@@ -30,12 +32,13 @@ typedef struct Game_t{
     int blockNum;
     int boostNum;
     int round;
-    int player;
+    CellType player;
     int hotspot;
     int *way;
     Player_t p_t[2];
 }Game_t;
 
+//*********************** Function prototypes *********************
 Game_t Initialization();
 int ValidateData(Game_t *g);
 void srnd(int seed);
@@ -44,26 +47,27 @@ void IncreaseRound(Game_t *g);
 void TogglePlayer(Game_t *g);
 void SetTwoRandom(Game_t *g);
 void PlaceFeatureToWay(Game_t *g, CellType f);
+int FindPlayer(Game_t *g);
+void ResetPlayer(Game_t *g);
+void SetPlayerToPos(Game_t *g);
 void PrintStep(Game_t *g);
+void FindHotspot(Game_t *g);
 void PrintStatistic(Game_t *g);
 
 int main(void) {
-    //*********************** Init *******************************
+    //*********************** Initialization ***********************
     Game_t game = Initialization();
-    //*********************** Validation **************************
-    if (ValidateData(&game))
-        return -1;
-	//*********************** Set random blocks ********************
-	printf("BLOCK:%");
+    //*********************** Validation ***************************
+    if (ValidateData(&game)) return -1;
+	//*********************** Set features *************************
 	PlaceFeatureToWay(&game,CELL_BLOCK);
-    //*********************** Set random boosts ********************
-	printf("\nBOOST:%");
     PlaceFeatureToWay(&game,CELL_BOOST);
     printf("\n");
     //************************ Game process ************************
     while(game.round != 27)
     {
         SetTwoRandom(&game);
+        SetPlayerToPos(&game);
 
         PrintStep(&game);
         IncreaseRound(&game);
@@ -97,13 +101,15 @@ Game_t Initialization()
 
     srnd(game.seed);
 
-    game.way = malloc (sizeof (int) * game.n);
+    game.way = (int *)malloc(game.n * 2 * sizeof(int));
     memset(game.way, CELL_EMPTY, game.n*sizeof(*game.way));
+    for (int r = 0; r <  game.n; r++)
+      for (int c = 0; c < 2; c++)
+         *(game.way + r*2 + c) = CELL_EMPTY;
 
-    for(int i=0; i<game.n; i++)
-    {
-        printf("[%d,%d]\n", game.way[i],0);
-    }
+    //for (int r = 0; r <  game.n; r++)
+        //for (int c = 0; c < 2; c++)
+         //printf("%d ", *(game.way + r*2 + c));
     return game;
 }
 int ValidateData(Game_t *g)
@@ -135,10 +141,15 @@ void PlaceFeatureToWay(Game_t *g, CellType f)
 {
     int featuresNum = 0;
     if(f == CELL_BLOCK)
+    {
+        printf("BLOCK:%");
         featuresNum = g->blockNum;
+    }
     else if(f == CELL_BOOST)
+    {
+        printf("\nBOOST:%");
         featuresNum = g ->boostNum;
-
+    }
     for(int i=0; i<featuresNum; i++)
     {
         int r = 0;
@@ -152,6 +163,33 @@ void PlaceFeatureToWay(Game_t *g, CellType f)
 
 	for(int i=0; i<g->n; i++)
         if(g->way[i] == f) printf("%d ", i);
+}
+int FindPlayer(Game_t *g)
+{
+    for(int i=0; i<g->n; i++)
+    {
+        if(g->way[i*2] == g->player)
+            return i;
+    }
+    return -1;
+}
+void ResetPlayer(Game_t *g)
+{
+    for(int i=0; i<g->n; i++)
+    {
+        if(g->way[i*2] == g->player)
+        {
+            g->way[i*2] = CELL_EMPTY;
+        }
+    }
+}
+void SetPlayerToPos(Game_t *g)
+{
+    int increment = g->p_t[g->player-1].r1 + g->p_t[g->player-1].r1 - 7;
+    int curPos = FindPlayer(g);
+    ResetPlayer(g);
+
+    g->way[(curPos+increment)*2] = g->player;
 }
 void PrintStep(Game_t *i)
 {
@@ -171,15 +209,20 @@ void IncreaseRound(Game_t *g)
 }
 void TogglePlayer(Game_t *g)
 {
-    g->player = 3 - g->player;
+     g->player = 3 - g->player;
+}
+void FindHotspot(Game_t *g)
+{
+    g->hotspot = 3;
 }
 void PrintStatistic(Game_t *g)
 {
     int winner = 0;
     if(g->way[g->n-1] == CELL_PLAYER1) winner = 1;
     else if(g->way[g->n-1] == CELL_PLAYER2) winner = 2;
-
     printf("WINNER:%d\n",winner);
+
+    FindHotspot(g);
     printf("HOTSPOT:%d",g->hotspot);
 }
 
