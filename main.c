@@ -20,7 +20,6 @@ typedef struct {
     int r2;
     int pos_after;
     int boost_after;
-    int hotspots;
 }Player_t;
 
 typedef struct Game_t{
@@ -32,18 +31,20 @@ typedef struct Game_t{
     int boostNum;
     int round;
     int player;
+    int hotspot;
     CellType *way;
     Player_t p_t[2];
 }Game_t;
 
 int ValidateData(Game_t *g);
-
 void srnd(int seed);
 int GetRandomNumber(int start, int end);
-
+void IncreaseRound(Game_t *g);
+void TogglePlayer(Game_t *g);
 void SetTwoRandom(Game_t *g);
 void PlaceFeatureToWay(Game_t *g, CellType f);
 void PrintStep(Game_t *g);
+void PrintStatistic(Game_t *g);
 
 int main(void) {
     //*********************** Init *******************************
@@ -56,6 +57,7 @@ int main(void) {
         .boostNum = 5,
         .round = 1,
         .player = 1,
+        .hotspot = 3,
         .p_t[0].pos_before = -1,
         .p_t[1].pos_before = -1
     };
@@ -80,20 +82,22 @@ int main(void) {
     printf("\n");
 
     //************************ Game process ************************
-    int temp = 26;
-    while(temp--)
+    while(game.round != 27)
     {
         SetTwoRandom(&game);
 
         PrintStep(&game);
-        game.round++;
+        IncreaseRound(&game);
+        TogglePlayer(&game);
     }
+    //************************ Finish ******************************
+    PrintStatistic(&game);
 
     while(1){}
 	return 0;
 }
 
-//------------ functions ---------------
+//************************ functions *******************************
 int ValidateData(Game_t *g)
 {
     if(g->seed <= 0   ||
@@ -116,8 +120,8 @@ int GetRandomNumber(int from, int to)
 }
 void SetTwoRandom(Game_t *g)
 {
-    g->p_t[g->player].r1 = GetRandomNumber(1, 6);
-    g->p_t[g->player].r2 = GetRandomNumber(1, 6);
+    g->p_t[g->player-1].r1 = GetRandomNumber(1, 6);
+    g->p_t[g->player-1].r2 = GetRandomNumber(1, 6);
 }
 void PlaceFeatureToWay(Game_t *g, CellType f)
 {
@@ -146,15 +150,29 @@ void PrintStep(Game_t *i)
     printf("[%d,%d] [%d,%d] [%d,%d] [%d,%d]\n",
            i->round,
            i->player,
-           i->p_t[i->player].pos_before,
-           i->p_t[i->player].boost_before,
-           i->p_t[i->player].r1,
-           i->p_t[i->player].r2,
-           i->p_t[i->player].pos_after,
-           i->p_t[i->player].boost_after);
+           i->p_t[i->player-1].pos_before,
+           i->p_t[i->player-1].boost_before,
+           i->p_t[i->player-1].r1,
+           i->p_t[i->player-1].r2,
+           i->p_t[i->player-1].pos_after,
+           i->p_t[i->player-1].boost_after);
 }
+void IncreaseRound(Game_t *g)
+{
+    g->round++;
+}
+void TogglePlayer(Game_t *g)
+{
+    g->player = 3 - g->player;
+}
+void PrintStatistic(Game_t *g)
+{
+    int winner = 0;
+    if(1) winner = 1;
 
-
+    printf("WINNER:%d\n",winner);
+    printf("HOTSPOT:%d",g->hotspot);
+}
 
 
 
