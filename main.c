@@ -38,49 +38,6 @@ typedef struct Game_t{
     Player_t p_t[2];
 }Game_t;
 
-//*********************** Function prototypes *********************
-Game_t Initialization();
-int ValidateData(Game_t *g);
-void srnd(int seed);
-int GetRandomNumber(int start, int end);
-void IncreaseRound(Game_t *g);
-void TogglePlayer(Game_t *g);
-void SetTwoRandom(Game_t *g);
-void PlaceFeatureToWay(Game_t *g, CellType f);
-int FindPlayer(Game_t *g);
-void ResetPlayer(Game_t *g);
-void SetPlayerToPos(Game_t *g);
-void PrintStep(Game_t *g);
-void FindHotspot(Game_t *g);
-void PrintStatistic(Game_t *g);
-
-int main(void) {
-    //*********************** Initialization ***********************
-    Game_t game = Initialization();
-    //*********************** Validation ***************************
-    if (ValidateData(&game)) return -1;
-	//*********************** Set features *************************
-	PlaceFeatureToWay(&game,CELL_BLOCK);
-    PlaceFeatureToWay(&game,CELL_BOOST);
-    printf("\n");
-    //************************ Game process ************************
-    while(game.round != 27)
-    {
-        SetTwoRandom(&game);
-        SetPlayerToPos(&game);
-
-        PrintStep(&game);
-        IncreaseRound(&game);
-        TogglePlayer(&game);
-    }
-    //************************ Finish ******************************
-    game.way[game.n-1] = CELL_PLAYER2;
-    PrintStatistic(&game);
-
-    while(1){}
-	return 0;
-}
-
 //************************ functions *******************************
 Game_t Initialization()
 {
@@ -93,7 +50,7 @@ Game_t Initialization()
         .boostNum = 5,
         .round = 1,
         .player = 1,
-        .hotspot = 3,
+        .hotspot = 0,
         .p_t[0].pos_before = -1,
         .p_t[1].pos_before = -1
     };
@@ -104,12 +61,15 @@ Game_t Initialization()
     game.way = (int *)malloc(game.n * 2 * sizeof(int));
     memset(game.way, CELL_EMPTY, game.n*sizeof(*game.way));
     for (int r = 0; r <  game.n; r++)
-      for (int c = 0; c < 2; c++)
-         *(game.way + r*2 + c) = CELL_EMPTY;
+    {
+        *(game.way + r*2) = CELL_EMPTY; //here cells for players, blocks and boosts
+        *(game.way + r*2 + 1) = 0;      //here quantity of visits exact cell
+    }
 
     //for (int r = 0; r <  game.n; r++)
         //for (int c = 0; c < 2; c++)
          //printf("%d ", *(game.way + r*2 + c));
+
     return game;
 }
 int ValidateData(Game_t *g)
@@ -164,32 +124,76 @@ void PlaceFeatureToWay(Game_t *g, CellType f)
 	for(int i=0; i<g->n; i++)
         if(g->way[i] == f) printf("%d ", i);
 }
-int FindPlayer(Game_t *g)
+int FindPlayer(Game_t *g, CellType player)
 {
     for(int i=0; i<g->n; i++)
     {
-        if(g->way[i*2] == g->player)
+        if(g->way[i*2] == player)
             return i;
     }
     return -1;
 }
-void ResetPlayer(Game_t *g)
+void ResetPlayer(Game_t *g, CellType player)
 {
     for(int i=0; i<g->n; i++)
     {
-        if(g->way[i*2] == g->player)
+        if(g->way[i*2] == player)
         {
             g->way[i*2] = CELL_EMPTY;
         }
     }
 }
-void SetPlayerToPos(Game_t *g)
+void ReplacePlayers(Game_t *g)
 {
-    int increment = g->p_t[g->player-1].r1 + g->p_t[g->player-1].r1 - 7;
-    int curPos = FindPlayer(g);
-    ResetPlayer(g);
+    int pos1 = GetPosBefore(g,CELL_PLAYER1);
+    int pos2 = GetPosBefore(g,CELL_PLAYER2);
+    ResetPlayer(g,CELL_PLAYER1);
+    ResetPlayer(g,CELL_PLAYER2);
+    SetPosBefore(g,CELL_PLAYER1,pos2);
+    SetPosBefore(g,CELL_PLAYER2,pos1);
+}
+void SetPosBefore(Game_t *g,CellType player, int pos)
+{
+    g->p_t[player-1].pos_before = pos;
+}
+int GetPosBefore(Game_t *g, CellType player)
+{
+    return g->p_t[player-1].pos_before;
+}
+void SetBoostsBefore(Game_t *g)
+{
 
-    g->way[(curPos+increment)*2] = g->player;
+}
+void PlacePlayerPosition(Game_t *g, int pos)
+{
+
+}
+void DoStep(Game_t *g)
+{
+    //Possition and boosts before
+    SetPosBefore(g, g->player, FindPlayer(g, g->player));
+    SetBoostsBefore(g);
+
+    ReplacePlayers(g);
+
+    //g->p_t[g->player-1].boosts_before = g->way[g->p_t[g->player-1].pos_before*2 +1];
+
+
+    if((g->p_t[g->player].r1 == g->p_t[g->player].r2) && g->p_t[g->player].r1 == 6)
+    {
+        ReplacePlayers(g);
+    }
+    if((g->p_t[g->player].r1 == g->p_t[g->player].r2) && g->p_t[g->player].r1 == 1)
+    {
+        ReplacePlayers(g);
+    }
+    int increment = g->p_t[g->player-1].r1 + g->p_t[g->player-1].r1 - 7;
+
+    // pos1 = FindPlayer(g, CELL_PLAYER1);
+    //int pos2 = FindPlayer(g, CELL_PLAYER2);
+
+    //ResetPlayer(g);
+    //g->way[(pos1+increment)*2] = CELL_PLAYER1;
 }
 void PrintStep(Game_t *i)
 {
@@ -213,7 +217,18 @@ void TogglePlayer(Game_t *g)
 }
 void FindHotspot(Game_t *g)
 {
-    g->hotspot = 3;
+    int maxCellScore = 0;
+    int hotspot = -1;
+    for (int r = 0; r <  g->n; r++)
+    {
+       printf("%d ", g->way[r*2+1]);
+       if(g->way[r*2+1] > maxCellScore)
+       {
+           maxCellScore = g->way[r*2+1];
+           hotspot = r;
+       }
+    }
+    g->hotspot = hotspot;
 }
 void PrintStatistic(Game_t *g)
 {
@@ -226,6 +241,31 @@ void PrintStatistic(Game_t *g)
     printf("HOTSPOT:%d",g->hotspot);
 }
 
+int main(void) {
+    //*********************** Initialization ***********************
+    Game_t game = Initialization();
+    //*********************** Validation ***************************
+    if (ValidateData(&game)) return -1;
+	//*********************** Set features *************************
+	PlaceFeatureToWay(&game,CELL_BLOCK);
+    PlaceFeatureToWay(&game,CELL_BOOST);
+    printf("\n");
+    //************************ Game process ************************
+
+    while(game.round<27)
+    {
+        SetTwoRandom(&game);//ok
+        DoStep(&game);
+        PrintStep(&game);//ok
+        IncreaseRound(&game);//ok
+        TogglePlayer(&game);//ok
+    }
+    //************************ Finish ******************************
+    PrintStatistic(&game);
+
+    while(1){}
+	return 0;
+}
 
 
 
