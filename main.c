@@ -32,10 +32,11 @@ typedef struct Game_t{
     int round;
     int player;
     int hotspot;
-    CellType *way;
+    int *way;
     Player_t p_t[2];
 }Game_t;
 
+Game_t Initialization();
 int ValidateData(Game_t *g);
 void srnd(int seed);
 int GetRandomNumber(int start, int end);
@@ -48,6 +49,37 @@ void PrintStatistic(Game_t *g);
 
 int main(void) {
     //*********************** Init *******************************
+    Game_t game = Initialization();
+    //*********************** Validation **************************
+    if (ValidateData(&game))
+        return -1;
+	//*********************** Set random blocks ********************
+	printf("BLOCK:%");
+	PlaceFeatureToWay(&game,CELL_BLOCK);
+    //*********************** Set random boosts ********************
+	printf("\nBOOST:%");
+    PlaceFeatureToWay(&game,CELL_BOOST);
+    printf("\n");
+    //************************ Game process ************************
+    while(game.round != 27)
+    {
+        SetTwoRandom(&game);
+
+        PrintStep(&game);
+        IncreaseRound(&game);
+        TogglePlayer(&game);
+    }
+    //************************ Finish ******************************
+    game.way[game.n-1] = CELL_PLAYER2;
+    PrintStatistic(&game);
+
+    while(1){}
+	return 0;
+}
+
+//************************ functions *******************************
+Game_t Initialization()
+{
     Game_t game = {
         .seed = 11,
         .nMin = 0,
@@ -63,41 +95,17 @@ int main(void) {
     };
     //scanf("%d %d %d %d",&seed,&cellsNum,&blockNum,&boostNum);
 
-    //*********************** Validation *************************
-    if (ValidateData(&game))
-        return -1;
-
     srnd(game.seed);
 
-    game.way = malloc (sizeof (CellType) * game.n);
+    game.way = malloc (sizeof (int) * game.n);
     memset(game.way, CELL_EMPTY, game.n*sizeof(*game.way));
 
-	//*********************** Set random blocks *******************
-	printf("BLOCK:%");
-	PlaceFeatureToWay(&game,CELL_BLOCK);
-
-    //*********************** Set random boosts *******************
-	printf("\nBOOST:%");
-    PlaceFeatureToWay(&game,CELL_BOOST);
-    printf("\n");
-
-    //************************ Game process ************************
-    while(game.round != 27)
+    for(int i=0; i<game.n; i++)
     {
-        SetTwoRandom(&game);
-
-        PrintStep(&game);
-        IncreaseRound(&game);
-        TogglePlayer(&game);
+        printf("[%d,%d]\n", game.way[i],0);
     }
-    //************************ Finish ******************************
-    PrintStatistic(&game);
-
-    while(1){}
-	return 0;
+    return game;
 }
-
-//************************ functions *******************************
 int ValidateData(Game_t *g)
 {
     if(g->seed <= 0   ||
@@ -168,7 +176,8 @@ void TogglePlayer(Game_t *g)
 void PrintStatistic(Game_t *g)
 {
     int winner = 0;
-    if(1) winner = 1;
+    if(g->way[g->n-1] == CELL_PLAYER1) winner = 1;
+    else if(g->way[g->n-1] == CELL_PLAYER2) winner = 2;
 
     printf("WINNER:%d\n",winner);
     printf("HOTSPOT:%d",g->hotspot);
