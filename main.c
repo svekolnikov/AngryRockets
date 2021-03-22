@@ -43,11 +43,11 @@ typedef struct Game_t{
 Game_t Initialization()
 {
     Game_t game = {
-        .seed = 40,
+        .seed = 3,
         .nMin = 0,
         .nMax = 100,
-        .n = 70,
-        .blockNum = 0,
+        .n = 40,
+        .blockNum = 10,
         .boostNum = 0,
         .round = 1,
         .player = 1,
@@ -55,7 +55,7 @@ Game_t Initialization()
         .p_t[0].pos_before = -1,
         .p_t[1].pos_before = -1
     };
-    scanf("%d %d %d %d",&game.seed,&game.n,&game.blockNum,&game.boostNum);
+    //scanf("%d %d %d %d",&game.seed,&game.n,&game.blockNum,&game.boostNum);
 
     srnd(game.seed);
 
@@ -170,8 +170,8 @@ void PlacePlayerToWayPosition(Game_t *g, CellType player, int pos)
 }
 int IsNextPlayerAhead(Game_t *g)
 {
-    int curPlayerPosition = GetPosBefore(g,g->player);
-    int nextPlayerPosition = GetPosBefore(g,3 - g->player);
+    int curPlayerPosition = FindPlayerOnWay(g,g->player);
+    int nextPlayerPosition = FindPlayerOnWay(g,3 - g->player);
     if(nextPlayerPosition > curPlayerPosition)
         return 1;
     return 0;
@@ -281,8 +281,8 @@ void DoStep(Game_t *g)
     }
     else // Player on the field
     {
-        if((CompareR1R2With(g,6) == 1 && IsNextPlayerAhead(g) == 1) ||  // case 1
-           (CompareR1R2With(g,1) == 1 && IsNextPlayerAhead(g) == 0))    // case 2
+        if(((CompareR1R2With(g,6) == 1 && IsNextPlayerAhead(g) == 1) ||
+           (CompareR1R2With(g,1) == 1 && IsNextPlayerAhead(g) == 0)) && FindPlayerOnWay(g,oppositePlayer) > -1)
         {
             ReplacePlayersOnWay(g);
             SetPosAfter(g,g->player, FindPlayerOnWay(g,g->player));
