@@ -84,6 +84,8 @@ int ValidateData(Game_t *g)
 
     return 0;
 }
+
+//*****************************************************************
 void srnd(int seed)
 {
     SEED = seed;
@@ -122,6 +124,7 @@ void PlaceFeatureToWay(Game_t *g, CellType f)
         if(g->way[i*2] == f) printf("%d ", i);
 }
 
+//*****************************************************************
 void SetTwoRandom(Game_t *g)
 {
     g->p_t[g->player-1].r1 = GetRandomNumber(1,6);
@@ -147,7 +150,7 @@ int GetMaxRandom(Game_t *g)
 
     return GetR2(g);
 }
-int CompareTwoRandomWith(Game_t *g, int num)
+int CompareR1R2With(Game_t *g, int num)
 {
     if((GetR1(g) == GetR2(g)) && GetR1(g) == num)
         return 1;
@@ -168,6 +171,7 @@ void PlacePlayerToWayPosition(Game_t *g, CellType player, int pos)
 {
     ResetPlayerOnWay(g,player);
     g->way[pos*2] = player;
+    g->way[pos*2 +1]++;
 }
 int IsNextPlayerAhead(Game_t *g)
 {
@@ -177,7 +181,6 @@ int IsNextPlayerAhead(Game_t *g)
         return 1;
     return 0;
 }
-//*****************************************************************
 void ResetPlayerOnWay(Game_t *g, CellType player)
 {
     for(int i=0; i<g->n; i++)
@@ -240,35 +243,82 @@ int GetBoostsAfter(Game_t *g,CellType player)
 }
 
 //*****************************************************************
+CellType GetCell(Game_t *g, int pos)
+{
+    return g->way[pos*2];
+}
+void ClearCell(Game_t *g,int pos)
+{
+    g->way[pos*2] = CELL_EMPTY;
+}
+//*****************************************************************
 void DoStep(Game_t *g)
 {
     SetPosBefore(g, g->player, FindPlayerOnWay(g, g->player));
     SetBoostsBefore(g, g->player, GetBoostsAfter(g, g->player));
 
+    CellType oppositePlayer = 3 - g->player;
+
+    //Step size
+    int d = 0;
+
     if(GetPosBefore(g,g->player) == -1) // Player outside
     {
-        //Step size
-        int d = 0;
-        if( GetRSum(g) > 7) d = GetRSum(g) - 7;
+        if( GetRSum(g) > 7)
+        {
+            d = GetRSum(g) - 7;
 
-        PlacePlayerToWayPosition(g,g->player,d);
+            CellType nextCell = GetCell(g,d);
+
+            if(nextCell == CELL_BLOCK)
+            {
+                SetBoostsAfter(g,g->player,0);
+                ClearCell(g,d);
+                return;
+            }
+            else if(nextCell == CELL_BOOST)
+                SetBoostsAfter(g,g->player,GetBoostsBefore(g,g->player)+1);
+            else if(nextCell == oppositePlayer)
+                ResetPlayerOnWay(g,oppositePlayer);
+
+            PlacePlayerToWayPosition(g,g->player,d);
+        }
     }
     else // Player on the field
     {
-        if(CompareTwoRandomWith(g,6) == 1 && IsNextPlayerAhead(g) == 1) // case 1
+        if((CompareR1R2With(g,6) == 1 && IsNextPlayerAhead(g) == 1) ||  // case 1
+           (CompareR1R2With(g,1) == 1 && IsNextPlayerAhead(g) == 0))    // case 2
         {
             ReplacePlayersOnWay(g);
+            SetPosAfter(g,g->player, FindPlayerOnWay(g,g->player));
             return;
         }
 
-        if(CompareTwoRandomWith(g,1) == 1 && IsNextPlayerAhead(g) == 0) // case 2
-        {
-            ReplacePlayersOnWay(g);
-            return;
-        }
+        d = FindPlayerOnWay(g,g->player) + GetMaxRandom(g) + GetBoostsBefore(g, g->player);
 
-        int d = GetMaxRandom(g) + GetBoostsBefore(g, g->player);
+        CellType nextCell = GetCell(g,d);
+        if(nextCell == CELL_BLOCK)
+        {
+            if(GetBoostsBefore(g,g->player) == 0)
+            {
+                ResetPlayerOnWay(g,g->player);
+                SetPosAfter(g,g->player, FindPlayerOnWay(g,g->player));
+                ClearCell(g,d);
+                return;
+            }
+            else
+            {
+                SetBoostsAfter(g,g->player,GetBoostsBefore(g,g->player)-1);
+            }
+        }
+        else if(nextCell == CELL_BOOST)
+            SetBoostsAfter(g,g->player,GetBoostsBefore(g,g->player)+1);
+        else if(nextCell == oppositePlayer)
+            ResetPlayerOnWay(g,oppositePlayer);
+
+        PlacePlayerToWayPosition(g,g->player,d);
     }
+    SetPosAfter(g,g->player, FindPlayerOnWay(g,g->player));
 }
 void PrintStep(Game_t *i)
 {
@@ -325,7 +375,7 @@ int main(void) {
     PlaceFeatureToWay(&game,CELL_BOOST);
     printf("\n");
     //************************ Game process ************************
-    while(game.round<27)
+    while(game.round < 27) //game.p_t[game.player].pos_after<game.n
     {
         SetTwoRandom(&game);//ok
         DoStep(&game);
