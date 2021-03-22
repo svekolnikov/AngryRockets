@@ -295,6 +295,12 @@ void DoStep(Game_t *g)
         }
 
         d = FindPlayerOnWay(g,g->player) + GetMaxRandom(g) + GetBoostsBefore(g, g->player);
+        if(d > g->n-1)
+        {
+            SetPosAfter(g,g->player, d);
+            return;
+        }
+
 
         CellType nextCell = GetCell(g,d);
         if(nextCell == CELL_BLOCK)
@@ -358,8 +364,11 @@ void FindHotspot(Game_t *g)
 void PrintStatistic(Game_t *g)
 {
     int winner = 0;
-    if(g->way[g->n-1] == CELL_PLAYER1) winner = 1;
-    else if(g->way[g->n-1] == CELL_PLAYER2) winner = 2;
+    if(g->p_t[CELL_PLAYER1-1].pos_after>g->n-1)
+        winner = CELL_PLAYER1;
+    else if(g->p_t[CELL_PLAYER2-1].pos_after>g->n-1)
+        winner = CELL_PLAYER2;
+
     printf("WINNER:%d\n",winner);
 
     FindHotspot(g);
@@ -375,11 +384,12 @@ int main(void) {
     PlaceFeatureToWay(&game,CELL_BOOST);
     printf("\n");
     //************************ Game process ************************
-    while(game.round < 27) //game.p_t[game.player].pos_after<game.n
+    while(1)
     {
         SetTwoRandom(&game);//ok
-        DoStep(&game);
+        DoStep(&game); //ok
         PrintStep(&game);//ok
+        if(game.p_t[game.player-1].pos_after>game.n-1)break;
         IncreaseRound(&game);//ok
         TogglePlayer(&game);//ok
     }
