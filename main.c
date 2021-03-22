@@ -43,19 +43,20 @@ typedef struct Game_t{
 Game_t Initialization()
 {
     Game_t game = {
-        .seed = 3,
+        .seed = 10,
+        .n = 15,
+        .blockNum = 3,
+        .boostNum = 3,
+
         .nMin = 0,
         .nMax = 100,
-        .n = 40,
-        .blockNum = 10,
-        .boostNum = 0,
         .round = 1,
         .player = 1,
         .hotspot = 0,
         .p_t[0].pos_before = -1,
         .p_t[1].pos_before = -1
     };
-    //scanf("%d %d %d %d",&game.seed,&game.n,&game.blockNum,&game.boostNum);
+    scanf("%d %d %d %d",&game.seed,&game.n,&game.blockNum,&game.boostNum);
 
     srnd(game.seed);
 
@@ -261,7 +262,7 @@ void DoStep(Game_t *g)
     {
         if( GetRSum(g) > 7)
         {
-            d = GetRSum(g) - 7;
+            d = GetRSum(g) - 7 + GetBoostsBefore(g, g->player);
 
             CellType nextCell = GetCell(g,d);
 
@@ -269,6 +270,8 @@ void DoStep(Game_t *g)
             {
                 SetBoostsAfter(g,g->player,0);
                 ClearCell(g,d);
+                ResetPlayerOnWay(g,g->player);
+                SetPosAfter(g,g->player, FindPlayerOnWay(g,g->player));
                 return;
             }
             else if(nextCell == CELL_BOOST)
@@ -385,7 +388,6 @@ int main(void) {
     }
     //************************ Finish ******************************
     PrintStatistic(&game);
-    while(1){}
 	return 0;
 }
 
