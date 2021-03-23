@@ -40,52 +40,20 @@ typedef struct Game_t{
 }Game_t;
 
 //************************ functions *******************************
-Game_t Initialization()
+void srnd(int seed)
 {
-    Game_t game = {
-        .seed = 10,
-        .n = 15,
-        .blockNum = 3,
-        .boostNum = 3,
-
-        .nMin = 0,
-        .nMax = 100,
-        .round = 1,
-        .player = 1,
-        .hotspot = 0,
-        .p_t[0].pos_before = -1,
-        .p_t[1].pos_before = -1
-    };
-    scanf("%d %d %d %d",&game.seed,&game.n,&game.blockNum,&game.boostNum);
-
-    srnd(game.seed);
-
-    game.way = (int *)malloc(game.n * 2 * sizeof(int));
-    memset(game.way, CELL_EMPTY, game.n*sizeof(*game.way));
-    for (int r = 0; r <  game.n; r++)
-    {
-        *(game.way + r*2) = CELL_EMPTY; //here cells for players, blocks and boosts
-        *(game.way + r*2 + 1) = 0;      //here quantity of visits exact cell
-    }
-    return game;
+    SEED = seed;
 }
 int ValidateData(Game_t *g)
 {
-    if(g->seed <= 0   ||
-       g->n > g->nMax ||
-       g->n < g->nMin ||
-       ((g->blockNum + g->boostNum) > g->n / 2)
-    )
+    if(g->seed <= 0 || g->n > g->nMax || g->n < g->nMin || (g->blockNum + g->boostNum) > g->n/2)
         return 1;
 
     return 0;
 }
 
 //*****************************************************************
-void srnd(int seed)
-{
-    SEED = seed;
-}
+
 int GetRandomNumber(int from, int to)
 {
     SEED = SEED * 16807 % R_MAX;
@@ -96,12 +64,12 @@ void PlaceFeatureToWay(Game_t *g, CellType f)
     int featuresNum = 0;
     if(f == CELL_BLOCK)
     {
-        printf("BLOCK:%");
+        printf("BLOCK:");
         featuresNum = g->blockNum;
     }
     else if(f == CELL_BOOST)
     {
-        printf("\nBOOST:%");
+        printf("\nBOOST:");
         featuresNum = g ->boostNum;
     }
     for(int i=0; i<featuresNum; i++)
@@ -163,6 +131,16 @@ int FindPlayerOnWay(Game_t *g, CellType player)
     }
     return -1;
 }
+void ResetPlayerOnWay(Game_t *g, CellType player)
+{
+    for(int i=0; i<g->n; i++)
+    {
+        if(g->way[i*2] == player)
+        {
+            g->way[i*2] = CELL_EMPTY;
+        }
+    }
+}
 void PlacePlayerToWayPosition(Game_t *g, CellType player, int pos)
 {
     ResetPlayerOnWay(g,player);
@@ -177,23 +155,14 @@ int IsNextPlayerAhead(Game_t *g)
         return 1;
     return 0;
 }
-void ResetPlayerOnWay(Game_t *g, CellType player)
-{
-    for(int i=0; i<g->n; i++)
-    {
-        if(g->way[i*2] == player)
-        {
-            g->way[i*2] = CELL_EMPTY;
-        }
-    }
-}
-int ReplacePlayersOnWay(Game_t *g)
+
+void ReplacePlayersOnWay(Game_t *g)
 {
     int wayPos1 = FindPlayerOnWay(g,CELL_PLAYER1);
     int wayPos2 = FindPlayerOnWay(g,CELL_PLAYER2);
 
     if(wayPos1 == -1 || wayPos2 == -1)
-        return -1;
+        return;
 
     ResetPlayerOnWay(g,CELL_PLAYER1);
     ResetPlayerOnWay(g,CELL_PLAYER2);
@@ -312,7 +281,7 @@ void DoStep(Game_t *g)
             }
             else
             {
-                SetBoostsAfter(g,g->player,GetBoostsBefore(g,g->player)-1);
+                SetBoostsAfter(g,g->player,0);
             }
         }
         else if(nextCell == CELL_BOOST)
@@ -369,9 +338,36 @@ void PrintStatistic(Game_t *g)
 }
 int main(void) {
     //*********************** Initialization ***********************
-    Game_t game = Initialization();
+    Game_t game = {
+        .seed = 10,
+        .n = 15,
+        .blockNum = 3,
+        .boostNum = 3,
+
+        .nMin = 10,
+        .nMax = 100,
+        .round = 1,
+        .player = 1,
+        .hotspot = 0,
+        .p_t[0].pos_before = -1,
+        .p_t[1].pos_before = -1
+    };
+    scanf("%d %d %d %d",&game.seed,&game.n,&game.blockNum,&game.boostNum);
     //*********************** Validation ***************************
-    if (ValidateData(&game)) return -1;
+    if (ValidateData(&game))
+        return 1;
+
+    srnd(game.seed);
+
+    game.way = (int *)malloc(game.n * 2 * sizeof(int));
+    memset(game.way, CELL_EMPTY, game.n*sizeof(*game.way));
+    for (int r = 0; r <  game.n; r++)
+    {
+        *(game.way + r*2) = CELL_EMPTY; //here cells for players, blocks and boosts
+        *(game.way + r*2 + 1) = 0;      //here quantity of visits exact cell
+    }
+
+
 	//*********************** Set features *************************
 	PlaceFeatureToWay(&game,CELL_BLOCK);
     PlaceFeatureToWay(&game,CELL_BOOST);
@@ -388,6 +384,7 @@ int main(void) {
     }
     //************************ Finish ******************************
     PrintStatistic(&game);
+    while(1){}
 	return 0;
 }
 
