@@ -240,6 +240,7 @@ void DoStep(Game_t *g)
                 SetBoostsAfter(g,g->player,0);
                 ClearCell(g,d);
                 ResetPlayerOnWay(g,g->player);
+                g->way[d*2 +1]++;
                 SetPosAfter(g,g->player, FindPlayerOnWay(g,g->player));
                 return;
             }
@@ -277,6 +278,7 @@ void DoStep(Game_t *g)
                 ResetPlayerOnWay(g,g->player);
                 SetPosAfter(g,g->player, FindPlayerOnWay(g,g->player));
                 ClearCell(g,d);
+                g->way[d*2 +1]++;
                 return;
             }
             else
