@@ -386,7 +386,7 @@ int main(void) {
     }
     //************************ Finish ******************************
     PrintStatistic(&game);
-    while(1){}
+
 	return 0;
 }
 
